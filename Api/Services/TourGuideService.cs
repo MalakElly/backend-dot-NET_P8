@@ -152,7 +152,7 @@ public class TourGuideService : ITourGuideService
         user.AddToVisitedLocations(visitedLocation);
 
         // Calcul des rewards en parallèle aussi
-        await Task.Run(() => _rewardsService.CalculateRewards(user));
+        await Task.Run(() => _rewardsService.CalculateRewardsAsync(user));
 
         return visitedLocation;
     }

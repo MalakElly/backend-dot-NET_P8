@@ -1,6 +1,7 @@
 ﻿using GpsUtil.Location;
 using RewardCentral;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using TourGuide.LibrairiesWrappers.Interfaces;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
@@ -35,11 +36,12 @@ public class RewardsService : IRewardsService
         _proximityBuffer = _defaultProximityBuffer;
     }
 
-    public void CalculateRewards(User user)
+    public async Task CalculateRewardsAsync(User user)
     {
         List<VisitedLocation> userLocations = user.VisitedLocations;
         List<Attraction> attractions = _gpsUtil.GetAttractions();
-
+        await Task.Run(() => 
+        {  
         for (int i=0;i<userLocations.Count;i++)
         {
             
@@ -61,6 +63,7 @@ public class RewardsService : IRewardsService
                 }
             }
         }
+        });
     }
     //public void CalculateRewards(User user)
     //{
