@@ -18,7 +18,7 @@ public class TourGuideService : ITourGuideService
     private readonly TripPricer.TripPricer _tripPricer;
     public Tracker Tracker { get; private set; }
     private readonly Dictionary<string, User> _internalUserMap = new();
-    private const string TripPricerApiKey = "test-server-api-key";
+    private const string TripPricerApiKey = "test-server-api-key";//TODO: A mettre dans appsettings.json
     private bool _testMode = true;
 
     public TourGuideService(ILogger<TourGuideService> logger, IGpsUtil gpsUtil, IRewardsService rewardsService, ILoggerFactory loggerFactory)
@@ -51,7 +51,7 @@ public class TourGuideService : ITourGuideService
 
     public VisitedLocation GetUserLocation(User user)
     {
-        return user.VisitedLocations.Any() ? user.GetLastVisitedLocation() : TrackUserLocation(user);
+           return user.VisitedLocations.Any() ? user.GetLastVisitedLocation() : TrackUserLocationAsync(user).Result;
     }
 
     public User GetUser(string userName)
@@ -71,38 +71,97 @@ public class TourGuideService : ITourGuideService
             _internalUserMap.Add(user.UserName, user);
         }
     }
-
-    public List<Provider> GetTripDeals(User user)
+    public async Task<List<Provider>> GetTripDealsAsync(User user)
     {
         int cumulativeRewardPoints = user.UserRewards.Sum(i => i.RewardPoints);
-        List<Provider> providers = _tripPricer.GetPrice(TripPricerApiKey, user.UserId,
-            user.UserPreferences.NumberOfAdults, user.UserPreferences.NumberOfChildren,
-            user.UserPreferences.TripDuration, cumulativeRewardPoints);
+
+        var tripPricerTask = new TripPricerTask(
+            TripPricerApiKey,
+            user.UserId,
+            user.UserPreferences.NumberOfAdults,
+            user.UserPreferences.NumberOfChildren,
+            user.UserPreferences.TripDuration
+        );
+
+        List<Provider> providers = await tripPricerTask.ExecuteAsync();
         user.TripDeals = providers;
         return providers;
     }
 
-    public VisitedLocation TrackUserLocation(User user)
+
+
+    //public List<Provider> GetTripDeals(User user)
+    //{
+    //    int cumulativeRewardPoints = user.UserRewards.Sum(i => i.RewardPoints);
+
+    //    List<Provider> providers = _tripPricer.GetPrice(
+    //        TripPricerApiKey,
+    //        user.UserId,
+    //        user.UserPreferences.NumberOfAdults,
+    //        user.UserPreferences.NumberOfChildren,
+    //        user.UserPreferences.TripDuration,
+    //        cumulativeRewardPoints
+    //    );
+
+
+    //    while (providers.Count < 10)
+    //    {
+    //        providers.Add(new Provider(
+    //            Guid.NewGuid().ToString(),
+    //            100.0,
+    //            1  // par défaut 1 jour
+    //        ));
+    //    }
+
+    //    user.TripDeals = providers.Take(10).ToList();
+    //    return user.TripDeals;
+    //}
+
+
+    public async Task<VisitedLocation> TrackUserLocationAsync(User user)
     {
-        VisitedLocation visitedLocation = _gpsUtil.GetUserLocation(user.UserId);
+        VisitedLocation visitedLocation = await Task.Run(() => _gpsUtil.GetUserLocation(user.UserId));//appel bloquant 
         user.AddToVisitedLocations(visitedLocation);
-        _rewardsService.CalculateRewards(user);
+
+        // Calcul des rewards en parallèle aussi
+        await Task.Run(() => _rewardsService.CalculateRewards(user));
+
         return visitedLocation;
     }
 
     public List<Attraction> GetNearByAttractions(VisitedLocation visitedLocation)
     {
-        List<Attraction> nearbyAttractions = new ();
-        foreach (var attraction in _gpsUtil.GetAttractions())
-        {
-            if (_rewardsService.IsWithinAttractionProximity(attraction, visitedLocation.Location))
-            {
-                nearbyAttractions.Add(attraction);
-            }
-        }
+        // Récupérer toutes les attractions
+        var attractions = _gpsUtil.GetAttractions();
 
-        return nearbyAttractions;
+        // Trier par distance entre l'utilisateur et l'attraction
+        var nearestAttractions = attractions
+            .OrderBy(a => GetDistance(visitedLocation.Location, a))
+            .Take(5) // Garder seulement les 5 plus proches
+            .ToList();
+
+        return nearestAttractions;
     }
+
+    // Méthode utilitaire pour calculer la distance entre deux points GPS
+    private double GetDistance(Locations loc1, Locations loc2)
+    {
+        double lat1 = loc1.Latitude;
+        double lon1 = loc1.Longitude;
+        double lat2 = loc2.Latitude;
+        double lon2 = loc2.Longitude;
+
+        double theta = lon1 - lon2;
+        double dist = Math.Sin(Deg2Rad(lat1)) * Math.Sin(Deg2Rad(lat2)) +
+                      Math.Cos(Deg2Rad(lat1)) * Math.Cos(Deg2Rad(lat2)) * Math.Cos(Deg2Rad(theta));
+        dist = Math.Acos(dist);
+        dist = Rad2Deg(dist);
+        dist = dist * 60 * 1.1515; // miles
+        return dist;
+    }
+
+    private double Deg2Rad(double deg) => (deg * Math.PI / 180.0);
+    private double Rad2Deg(double rad) => (rad / Math.PI * 180.0);
 
     private void AddShutDownHook()
     {

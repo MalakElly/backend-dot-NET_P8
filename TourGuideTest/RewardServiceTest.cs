@@ -17,17 +17,21 @@ public class RewardServiceTest : IClassFixture<DependencyFixture>
     {
         _fixture = fixture;
     }
-
     [Fact]
-    public void UserGetRewards()
+    public async Task UserGetRewards()
     {
         _fixture.Initialize(0);
         var user = new User(Guid.NewGuid(), "jon", "000", "jon@tourGuide.com");
         var attraction = _fixture.GpsUtil.GetAttractions().First();
+
         user.AddToVisitedLocations(new VisitedLocation(user.UserId, attraction, DateTime.Now));
-        _fixture.TourGuideService.TrackUserLocation(user);
+
+        // attendre la tâche sinon CalculateRewards n'est pas encore exécuté
+        await _fixture.TourGuideService.TrackUserLocationAsync(user);
+
         var userRewards = user.UserRewards;
         _fixture.TourGuideService.Tracker.StopTracking();
+
         Assert.True(userRewards.Count == 1);
     }
 
@@ -38,7 +42,7 @@ public class RewardServiceTest : IClassFixture<DependencyFixture>
         Assert.True(_fixture.RewardsService.IsWithinAttractionProximity(attraction, attraction));
     }
 
-    [Fact(Skip = ("Needs fixed - can throw InvalidOperationException"))]
+    [Fact]//(Skip = ("Needs fixed - can throw InvalidOperationException"))
     public void NearAllAttractions()
     {
         _fixture.Initialize(1);

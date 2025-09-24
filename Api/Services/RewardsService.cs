@@ -1,4 +1,6 @@
 ﻿using GpsUtil.Location;
+using RewardCentral;
+using System.Diagnostics;
 using TourGuide.LibrairiesWrappers.Interfaces;
 using TourGuide.Services.Interfaces;
 using TourGuide.Users;
@@ -21,6 +23,7 @@ public class RewardsService : IRewardsService
         _rewardsCentral =rewardCentral;
         _proximityBuffer = _defaultProximityBuffer;
     }
+   
 
     public void SetProximityBuffer(int proximityBuffer)
     {
@@ -34,24 +37,65 @@ public class RewardsService : IRewardsService
 
     public void CalculateRewards(User user)
     {
-        count++;
         List<VisitedLocation> userLocations = user.VisitedLocations;
         List<Attraction> attractions = _gpsUtil.GetAttractions();
 
-        foreach (var visitedLocation in userLocations)
+        for (int i=0;i<userLocations.Count;i++)
         {
-            foreach (var attraction in attractions)
+            
+            for (int j=0;j<attractions.Count;j++)
             {
-                if (!user.UserRewards.Any(r => r.Attraction.AttractionName == attraction.AttractionName))
+              
+                var rewardsSnapshot = user.UserRewards.ToList();
+
+                if (!rewardsSnapshot.Any(r => r.Attraction.AttractionName == attractions[j].AttractionName))//Eviter InvalideOperationException
                 {
-                    if (NearAttraction(visitedLocation, attraction))
+                    if (NearAttraction(userLocations[i], attractions[j]))
                     {
-                        user.AddUserReward(new UserReward(visitedLocation, attraction, GetRewardPoints(attraction, user)));
+                        user.AddUserReward(new UserReward(
+                           userLocations[i],
+                            attractions[j],
+                            GetRewardPoints(attractions[j], user)
+                        ));
                     }
                 }
             }
         }
     }
+    //public void CalculateRewards(User user)
+    //{
+    //    List<VisitedLocation> userLocations = user.VisitedLocations;
+    //    List<Attraction> attractions = _gpsUtil.GetAttractions();
+
+    //    foreach (var visitedLocation in userLocations)
+    //    {
+    //        Debug.WriteLine("VistedLocation");
+    //        Debug.WriteLine(visitedLocation.Location.Longitude);
+    //        Debug.WriteLine(visitedLocation.Location.Latitude);
+    //        foreach (var attraction in attractions)
+    //        {
+    //            Debug.WriteLine("attraction");
+    //            Debug.WriteLine(attraction.Longitude);
+    //            Debug.WriteLine(attraction.Latitude);
+    //            var rewardsSnapshot = user.UserRewards.ToList();
+
+    //            if (!rewardsSnapshot.Any(r => r.Attraction.AttractionName == attraction.AttractionName))//Eviter InvalideOperationException
+    //            {
+    //                if (NearAttraction(visitedLocation, attraction))
+    //                {
+    //                    user.AddUserReward(new UserReward(
+    //                        visitedLocation,
+    //                        attraction,
+    //                        GetRewardPoints(attraction, user)
+    //                    ));
+    //                }
+    //            }
+    //        }
+    //    }
+    //}
+
+
+
 
     public bool IsWithinAttractionProximity(Attraction attraction, Locations location)
     {
@@ -61,10 +105,15 @@ public class RewardsService : IRewardsService
 
     private bool NearAttraction(VisitedLocation visitedLocation, Attraction attraction)
     {
+        if (visitedLocation.Location.Latitude == attraction.Latitude &&
+        visitedLocation.Location.Longitude == attraction.Longitude)
+        {
+            return true;
+        }
         return GetDistance(attraction, visitedLocation.Location) <= _proximityBuffer;
     }
 
-    private int GetRewardPoints(Attraction attraction, User user)
+    public int GetRewardPoints(Attraction attraction, User user)
     {
         return _rewardsCentral.GetAttractionRewardPoints(attraction.AttractionId, user.UserId);
     }

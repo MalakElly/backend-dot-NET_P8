@@ -26,11 +26,11 @@ namespace TourGuideTest
         }
 
         [Fact]
-        public void GetUserLocation()
+        public async Task GetUserLocation()
         {
             _fixture.Initialize(0);
             var user = new User(Guid.NewGuid(), "jon", "000", "jon@tourGuide.com");
-            var visitedLocation = _fixture.TourGuideService.TrackUserLocation(user);
+            var visitedLocation = await _fixture.TourGuideService.TrackUserLocationAsync(user);
             _fixture.TourGuideService.Tracker.StopTracking();
 
             Assert.Equal(user.UserId, visitedLocation.UserId);
@@ -74,23 +74,25 @@ namespace TourGuideTest
         }
 
         [Fact]
-        public void TrackUser()
+        public async void TrackUser()
         {
             _fixture.Initialize();
             var user = new User(Guid.NewGuid(), "jon", "000", "jon@tourGuide.com");
-            var visitedLocation = _fixture.TourGuideService.TrackUserLocation(user);
+            var visitedLocation = await _fixture.TourGuideService.TrackUserLocationAsync(user);
 
             _fixture.TourGuideService.Tracker.StopTracking();
 
             Assert.Equal(user.UserId, visitedLocation.UserId);
         }
 
-        [Fact(Skip = "Not yet implemented")]
-        public void GetNearbyAttractions()
+        [Fact]
+        public async Task GetNearbyAttractions()
         {
             _fixture.Initialize(0);
             var user = new User(Guid.NewGuid(), "jon", "000", "jon@tourGuide.com");
-            var visitedLocation = _fixture.TourGuideService.TrackUserLocation(user);
+
+            // attendre la tâche 
+            var visitedLocation = await _fixture.TourGuideService.TrackUserLocationAsync(user);
 
             List<Attraction> attractions = _fixture.TourGuideService.GetNearByAttractions(visitedLocation);
 
@@ -100,11 +102,11 @@ namespace TourGuideTest
         }
 
         [Fact]
-        public void GetTripDeals()
+        public async Task GetTripDeals()
         {
             _fixture.Initialize(0);
             var user = new User(Guid.NewGuid(), "jon", "000", "jon@tourGuide.com");
-            List<Provider> providers = _fixture.TourGuideService.GetTripDeals(user);
+            List<Provider> providers = await _fixture.TourGuideService.GetTripDealsAsync(user);
 
             _fixture.TourGuideService.Tracker.StopTracking();
 

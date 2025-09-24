@@ -1,0 +1,27 @@
+name: .NET CI
+
+on:
+  push:        # Exécuter à chaque push
+  pull_request: # Exécuter aussi sur les Pull Requests
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest   # machine Linux fournie par GitHub
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: 7.0.12
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Run unit tests
+      run: dotnet test --no-build --configuration Release --filter Category!=Performance

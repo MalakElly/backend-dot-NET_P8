@@ -35,11 +35,16 @@ public class User
 
     public void AddUserReward(UserReward userReward)
     {
-        if (!UserRewards.Exists(r => r.Attraction.AttractionName == userReward.Attraction.AttractionName))
+        lock (UserRewards)
         {
-            UserRewards.Add(userReward);
+            if (!UserRewards.Any(r => r.Attraction.AttractionName == userReward.Attraction.AttractionName))
+            {
+                UserRewards.Add(userReward);
+            }
         }
+
     }
+
 
     public VisitedLocation GetLastVisitedLocation()
     {
