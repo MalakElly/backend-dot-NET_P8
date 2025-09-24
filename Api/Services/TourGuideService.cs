@@ -71,22 +71,50 @@ public class TourGuideService : ITourGuideService
             _internalUserMap.Add(user.UserName, user);
         }
     }
+
     public async Task<List<Provider>> GetTripDealsAsync(User user)
     {
         int cumulativeRewardPoints = user.UserRewards.Sum(i => i.RewardPoints);
 
-        var tripPricerTask = new TripPricerTask(
-            TripPricerApiKey,
-            user.UserId,
-            user.UserPreferences.NumberOfAdults,
-            user.UserPreferences.NumberOfChildren,
-            user.UserPreferences.TripDuration
-        );
+        // Plusieurs tâches en parallèle
+        var tasks = Enumerable.Range(0, 10).Select(_ =>
+        {
+            var tripPricerTask = new TripPricerTask(
+                TripPricerApiKey,
+                user.UserId,
+                user.UserPreferences.NumberOfAdults,
+                user.UserPreferences.NumberOfChildren,
+                user.UserPreferences.TripDuration
+            );
+            return tripPricerTask.ExecuteAsync();
+        });
 
-        List<Provider> providers = await tripPricerTask.ExecuteAsync();
+        // Attente de toutes les tâches
+        var results = await Task.WhenAll(tasks);
+
+        // Fusionner toutes les listes
+        var providers = results.SelectMany(r => r).Take(10).ToList();
+
         user.TripDeals = providers;
         return providers;
     }
+
+    //public async Task<List<Provider>> GetTripDealsAsync(User user)
+    //{
+    //    int cumulativeRewardPoints = user.UserRewards.Sum(i => i.RewardPoints);
+
+    //    var tripPricerTask = new TripPricerTask(
+    //        TripPricerApiKey,
+    //        user.UserId,
+    //        user.UserPreferences.NumberOfAdults,
+    //        user.UserPreferences.NumberOfChildren,
+    //        user.UserPreferences.TripDuration
+    //    );
+
+    //    List<Provider> providers = await tripPricerTask.ExecuteAsync();
+    //    user.TripDeals = providers;
+    //    return providers;
+    //}
 
 
 
