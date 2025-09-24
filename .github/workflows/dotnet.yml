@@ -1,12 +1,12 @@
-name: .NET CI
+name: .NET CI/CD
 
 on:
-  push:        # Exécuter à chaque push
-  pull_request: # Exécuter aussi sur les Pull Requests
+  push:       # à chaque push
+  pull_request: # et à chaque PR
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest   # machine Linux fournie par GitHub
+  build-test-deploy:
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
@@ -15,7 +15,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: 8.0.x
+        dotnet-version: 8.0.12
 
     - name: Restore dependencies
       run: dotnet restore
@@ -24,4 +24,15 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Run unit tests
-      run: dotnet test --no-build --configuration Release 
+      run: dotnet test --no-build --configuration Release --filter Category!=Performance --logger "trx;LogFileName=test-results.trx"
+
+    - name: Publish app
+      run: dotnet publish -c Release -o ./publish
+
+    - name: Upload artifacts (build + test results)
+      uses: actions/upload-artifact@v3
+      with:
+        name: tourguide-artifacts
+        path: |
+          ./publish
+          **/TestResults/*.trx

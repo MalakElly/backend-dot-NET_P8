@@ -17,7 +17,7 @@ public class GpsUtil
         rateLimiter.Wait();
         try
         {
-            //Sleep();
+            Sleep();
 
             double longitude = ThreadLocalRandom.NextDouble(-180.0, 180.0);
             longitude = Math.Round(longitude, 6);
@@ -81,14 +81,17 @@ public class GpsUtil
         }
     }
 
-    //private void Sleep()
-    //{
-    //    int delay = ThreadLocalRandom.Current.Next(30, 100);
-    //    Thread.Sleep(delay);
-    //}
-
-    private void SleepLighter()
+    private async Task Sleep()
     {
-        Thread.Sleep(10);
+        //int delay = ThreadLocalRandom.Current.Next(30, 100);
+        //Thread.Sleep(delay);
+        int delay = ThreadLocalRandom.Current.Next(30, 100);
+        await Task.Delay(delay);
+    }
+
+    private async Task SleepLighter()
+    {
+
+        await Task.Delay(10);
     }
 }

@@ -15,7 +15,7 @@ public class TripPricer
         HashSet<string> providersUsed = new HashSet<string>();
 
         // Sleep to simulate some latency
-        Thread.Sleep(ThreadLocalRandom.Current.Next(1, 50));
+        Thread.Sleep(ThreadLocalRandom.Current.Next(1, 50));//Latence réseau ou autre 
 
         for (int i = 0; i < 5; i++)
         {
